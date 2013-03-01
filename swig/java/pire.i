@@ -19,12 +19,12 @@
 %rename(operator_eq) operator=;
 
   %template(pire_wchar32_vector) std::vector<uint32_t>;
-
+/*
   struct output_iterator_tag { };
 
   %rename(voidIter) iterator<output_iterator_tag, void, void, void, void>;
   struct iterator<output_iterator_tag, void, void, void, void> { };
-  
+*/  
   /*%rename (backInsertIterator) back_insert_iterator<std::vector<uint32_t> >;
   class back_insert_iterator<std::vector<uint32_t> >
   {
@@ -39,41 +39,46 @@
       back_insert_iterator operator++ (int);
   };*/
 
-template <class Container>
-  class back_insert_iterator :
-    public iterator<output_iterator_tag,void,void,void,void>
-{
-protected:
-  Container* container;
+//
+//  class back_insert_iterator :
+//    public iterator<output_iterator_tag,void,void,void,void>
 
+namespace std {
+
+template<class _Container>
+	class back_insert_iterator
+		: public _Outit
+	{	// wrap pushes to back of container as output iterator
 public:
-  typedef Container container_type;
-  explicit back_insert_iterator (Container& x) : container(&x) {}
-  back_insert_iterator<Container>& operator= (typename Container::const_reference value)
-    { container->push_back(value); return *this; }
-  back_insert_iterator<Container>& operator* ()
-    { return *this; }
-  back_insert_iterator<Container>& operator++ ()
-    { return *this; }
-  back_insert_iterator<Container> operator++ (int)
-    { return *this; }
-};
+	typedef back_insert_iterator<_Container> _Myt;
+	typedef _Container container_type;
+	typedef typename _Container::const_reference const_reference;
+	typedef typename _Container::value_type _Valty;
 
-  %template (backInsertIterator) back_insert_iterator<std::vector<uint32_t> >;
-  
+	explicit back_insert_iterator(_Container& _Cont);
+	_Myt& operator=(const _Valty& _Val);
 
-/*  %rename (backInserter) back_insert_iterator<std::vector<uint32_t> >;
+	_Myt& operator*();
+	_Myt& operator++();
+	_Myt operator++(int);
+
+protected:
+	_Container *container;	// pointer to container
+	};
+
   template< class Container >
   std::back_insert_iterator<Container> back_inserter( Container& c)
   {
     return std::back_insert_iterator<Container>(c);
   }
-*/
-  //back_insert_iterator<Container> back_inserter (Container& x);
-  //%template(backInserter) std::back_inserter<std::vector<uint32_t> >;
+}
 
+  %template (backInsertIterator) std::back_insert_iterator<std::vector<uint32_t> >; 
+  %template(backInserter) std::back_inserter<std::vector<uint32_t> >;
+  
 namespace Pire 
 {
+
 	class Fsm {
 	public:		
 		Fsm();
@@ -97,18 +102,37 @@ namespace Pire
       virtual ~Encoding() {}
       virtual void AppendDot(Fsm&) const = 0;
 
-      std::back_insert_iterator<std::vector<uint32_t> > FromLocal(const char* begin, const char* end, std::back_insert_iterator<std::vector<uint32_t> > iter) const;
   };
 
+namespace {
   class Utf8: public Encoding 
   {
     public:
 		  Utf8() : Encoding() {}
 		  uint32_t FromLocal(const char*& begin, const char* end) const;
-		  void AppendDot(Fsm& fsm) const;
-	};
+		  void AppendDot(Fsm& fsm) const;	
+
+  %extend {
+  std::vector<Pire::wchar32> _FromLocal(const std::string &in) const 
+  {
+          std::vector<Pire::wchar32> ucs4;
+          $self->FromLocal(in.c_str(), in.c_str() + strlen(in.c_str()), std::back_inserter(ucs4));
+          return ucs4;
+  }
+}  
+
+  };
+  static const Utf8 utf8;
+}
+
+namespace Encodings {
+	const Encoding& Latin1();
+	const Encoding& Utf8();
+
+};
 
 }
+
   
 
 
