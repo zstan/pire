@@ -92,8 +92,19 @@ namespace Pire
     explicit Lexer(const char* str);
     ~Lexer();
     const Pire::Encoding& Encoding() const;
-    void Assign(std::string::iterator begin, std::string::iterator end);
+    //void Assign(std::vector<uint32_t>::iterator begin, std::vector<uint32_t>::iterator end);
     Fsm Parse();
+    %extend {
+      void assign(const std::vector<uint32_t> v)
+      {
+        std::vector<uint32_t>::const_iterator begin = v.begin();
+        std::vector<uint32_t>::const_iterator end   = v.end();
+        //$self->AddFeature(new CharacterRangeReader);
+        //$self->AddFeature(new RepetitionCountReader);
+        //$self->AddFeature(Features::CharClasses());
+     		$self->Assign(begin, end);
+      }
+    } 
   };
 
   class Encoding 
@@ -102,7 +113,18 @@ namespace Pire
       virtual ~Encoding() {}
       virtual void AppendDot(Fsm&) const = 0;
 
+      %extend {
+        std::vector<uint32_t> _FromLocal(const std::string &in) const 
+        {
+          std::vector<uint32_t> ucs4;
+          $self->FromLocal(in.c_str(), in.c_str() + strlen(in.c_str()), std::back_inserter(ucs4));
+          return ucs4;
+        }
+      }
+
+    
   };
+
 
 namespace {
   class Utf8: public Encoding 
@@ -112,23 +134,13 @@ namespace {
 		  uint32_t FromLocal(const char*& begin, const char* end) const;
 		  void AppendDot(Fsm& fsm) const;	
 
-  %extend {
-  std::vector<Pire::wchar32> _FromLocal(const std::string &in) const 
-  {
-          std::vector<Pire::wchar32> ucs4;
-          $self->FromLocal(in.c_str(), in.c_str() + strlen(in.c_str()), std::back_inserter(ucs4));
-          return ucs4;
-  }
-}  
-
   };
+
   static const Utf8 utf8;
 }
 
 namespace Encodings {
-	const Encoding& Latin1();
 	const Encoding& Utf8();
-
 };
 
 }
