@@ -47,7 +47,6 @@ namespace std {
 
 template<class _Container>
 	class back_insert_iterator
-		: public _Outit
 	{	// wrap pushes to back of container as output iterator
 public:
 	typedef back_insert_iterator<_Container> _Myt;
@@ -79,12 +78,68 @@ protected:
 namespace Pire 
 {
 
+namespace Impl {
+
+  template <size_t MaskCount>
+  class ExitMasks {
+  };  
+
+  %template(MaskCount_2) ExitMasks<2>;
+
+  struct Relocatable {
+	};
+
+  template<class Relocation, class Shortcutting>
+  class Scanner {
+  };
+
+  %template(Scanner_Relocatable) Scanner<Relocatable, ExitMasks<2> >;
+}
+
+  typedef Impl::Scanner<Impl::Relocatable, Impl::ExitMasks<2> > Scanner1;
+
 	class Fsm {
 	public:		
 		Fsm();
     Fsm& Surround();
-		template<class Scanner> Scanner Compile();
+		template<class T> T Compile();
+    //%template(Scanner_Reloc) Compile<Impl::Scanner<Impl::Relocatable, Impl::ExitMasks<2> > >;
+    //%template(Scanner_Reloc) Compile<Impl::Scanner<Impl::Relocatable, Impl::ExitMasks<2> > >;
   };
+  
+%extend Fsm {
+     %template(Scanner_Reloc) Compile<Impl::Scanner<Impl::Relocatable, Impl::ExitMasks<2> > >;
+}
+
+  typedef std::string ystring;
+  typedef unsigned short Char;
+
+  template<class Scanner>
+  class RunHelper {
+  public:
+  	explicit RunHelper(const Scanner& sc): Sc(&sc) { Sc->Initialize(St); }
+
+  	RunHelper<Scanner>& Step(Char letter);
+  	RunHelper<Scanner>& Run(const char* begin, const char* end);
+  	RunHelper<Scanner>& Run(const char* str, size_t size);
+  	RunHelper<Scanner>& Run(const ystring& str);
+  	RunHelper<Scanner>& Begin();
+  	RunHelper<Scanner>& End();
+
+      %extend {
+        bool isOk() const
+        {return $self->Sc->Final($self->St);}
+      }
+
+  };
+
+  %template (RunHelperImpl) RunHelper<Impl::Scanner<Impl::Relocatable, Impl::ExitMasks<2> > >;
+
+/*  template<class Scanner>
+  RunHelper<Scanner> Runner(const Scanner& sc);
+
+  %template (RunnerImpl) Runner<Impl::Scanner<Impl::Relocatable, Impl::ExitMasks<2> > >;
+  */
 
   class Lexer {
   public:
@@ -94,6 +149,7 @@ namespace Pire
     const Pire::Encoding& Encoding() const;
     //void Assign(std::vector<uint32_t>::iterator begin, std::vector<uint32_t>::iterator end);
     Fsm Parse();
+    //Lexer& AddFeature(Feature* a);
     %extend {
       void assign(const std::vector<uint32_t> v)
       {
@@ -101,7 +157,7 @@ namespace Pire
         std::vector<uint32_t>::const_iterator end   = v.end();
         //$self->AddFeature(new CharacterRangeReader);
         //$self->AddFeature(new RepetitionCountReader);
-        //$self->AddFeature(Features::CharClasses());
+        $self->InstallDefaultFeatures();
      		$self->Assign(begin, end);
       }
     } 
@@ -143,7 +199,9 @@ namespace Encodings {
 	const Encoding& Utf8();
 };
 
+
 }
+
 
   
 
